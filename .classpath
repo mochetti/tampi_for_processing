@@ -2,5 +2,8 @@
 <classpath>
 	<classpathentry kind="src" output="bin" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/core.jar"/>
+	<classpathentry kind="lib" path="lib/webSockets.jar"/>
+	<!-- <classpathentry kind="lib" path="lib/websocket-client-9.3.6.v20151106.jar"/> -->
 	<classpathentry kind="output" path="resources/code"/>
 </classpath>
