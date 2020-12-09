@@ -1,7 +1,22 @@
 {
     "java.project.referencedLibraries": {
         "include": [
-            "lib/**/*.jar"
+            "lib/**/*.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/javax.servlet-api-3.1.0.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-http-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-io-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-security-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-server-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-servlet-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/jetty-util-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/slf4j-api-1.7.13.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/slf4j-simple-1.7.13.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/websocket-api-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/websocket-client-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/websocket-common-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/websocket-server-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/websocket-servlet-9.3.6.v20151106.jar",
+            "/Users/thiagomochetti/Documents/Processing/libraries/webSockets/library/webSockets.jar"
         ],
         "exclude": [
             "/processing-library-template/lib/core.jar"

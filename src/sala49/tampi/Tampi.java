@@ -2,32 +2,18 @@ package sala49.tampi;
 
 
 import processing.core.*;
-import processing.event.*;
 import websockets.WebsocketClient;
-// import websockets.WebsocketClientEvents;
-
-/**
- * This is a template class and can be used to start a new processing Library.
- * Make sure you rename this class as well as the name of the example package 'template' 
- * to your own Library naming convention.
- * 
- * (the tag example followed by the name of an example included in folder 'examples' will
- * automatically include the example in the javadoc.)
- *
- * @example Hello 
- */
 
 public class Tampi {
 	
 	// myParent is a reference to the parent sketch
-	PApplet myParent;
+	PApplet app;
 
 	// Create websocket client object
 	WebsocketClient client;
 	
 	public final static String VERSION = "##library.prettyVersion##";
 	
-
 	/**
 	 * a Constructor, usually called in the setup() method in your sketch to
 	 * initialize and start the Library.
@@ -36,20 +22,48 @@ public class Tampi {
 	 * @param theParent the parent PApplet
 	 */
 	public Tampi(PApplet theParent) {
-		myParent = theParent;
-		welcome();
-	}
-	
-	
-	private void welcome() {
+		app = theParent;
 		System.out.println("##library.name## ##library.prettyVersion## by ##author##");
 	}
 
 	public void init() {
 		// Connect using default address
-		client = new WebsocketClient(myParent, "ws://192.168.4.1:81");
-		client.sendMessage("message");
+		client = new WebsocketClient(app, "ws://192.168.4.1:81");
+		// client.sendMessage("message");
 	}
+
+	public PVector busca(int cor) {
+		boolean found = false;
+		Blob b = new Blob();
+		for(int x=0; x<app.width; x++) {
+			for(int y=0; y<app.height; y++){
+			int p = app.pixels[y*app.width + x];
+			if(app.red(p) - app.red(cor) < 20 && app.green(p) - app.green(cor) < 20 && app.blue(p) - app.blue(cor) < 20){
+				if(found && b.isNear(x, y)) {
+					b.add(x, y);
+				}
+				else {
+					b = new Blob(x, y);
+					found = true;
+				}
+			}
+			}
+		}
+		return b.center();
+	}
+
+	// private int red(int color) {
+	// 	int mask = 255<<16; //16711680
+	// 	return (color & mask)>>16;
+	// }
+	// private int green(int color) {
+	// 	int mask = 255<<8; //65280 
+	// 	return (color & mask)>>8;
+	// }
+	// private int blue(int color) {
+	// 	int mask = 255;
+	// 	return (color & mask);
+	// }
 
 	public void andar() {
 		client.sendMessage("a");
@@ -71,39 +85,6 @@ public class Tampi {
 		return -5f;
 	}
 
-	public void trajeto(PVector eu, PVector alvo) {
-		// le a camera
-		// pid
-		// envia o comando
-	}
-	
-	
-	public void mouseEvent(MouseEvent event) {
-		int x = event.getX();
-		int y = event.getY();
-
-		String s = "";
-	  
-		switch (event.getAction()) {
-		  case MouseEvent.PRESS:
-			// do something for the mouse being pressed
-			s = x + "	" + y;
-			break;
-		  case MouseEvent.RELEASE:
-			// do something for mouse released
-			break;
-		  case MouseEvent.CLICK:
-			// do something for mouse clicked
-			break;
-		  case MouseEvent.DRAG:
-			// do something for mouse dragged
-			break;
-		  case MouseEvent.MOVE:
-			// do something for mouse moved
-			break;
-		}
-		print(s);
-	  }
 
 	/**
 	 * return the version of the Library.
@@ -115,4 +96,3 @@ public class Tampi {
 	}
 
 }
-
