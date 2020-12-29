@@ -134,14 +134,22 @@ public class Visao {
      * @param obstaculos array com as coordenadas dos obstaculos
      * @param intensidade fator de intensidade do alvo
      * @param resolucao tamanho de cada célula do campo
+     * @param debug mostra as setas na tela
      * @return PVector[][]
 	 */
-    public PVector[][] campoPotencial(PVector alvo, PVector[] obstaculos, float intensidade, int resolucao) {
+    public PVector[][] campoPotencial(PVector alvo, PVector[] obstaculos, float intensidade, int resolucao, boolean debug) {
         // Calcula a quantidade de células em cada eixo
         int qx = app.width / resolucao;
         int qy = app.height / resolucao;
 
         PVector[][] campo = new PVector[qx][qy];
+
+        // Obstaculos virtuais nas bordas
+        PVector[] obsVirtuais = new PVector[2 * qx + 2 * qy];
+        for(int i=0; i<qx; i++) obsVirtuais[i] = new PVector(i * resolucao, 0);
+        for(int i=0; i<qx; i++) obsVirtuais[i + qx] = new PVector(i * resolucao, app.height);
+        for(int i=0; i<qy; i++) obsVirtuais[i + 2*qx] = new PVector(0, i * resolucao);
+        for(int i=0; i<qy; i++) obsVirtuais[i + 2*qx + qy] = new PVector(app.width, i * resolucao);        
 
         for(int i=0; i<qx; i++) {
             for(int j=0; j<qy; j++) {
@@ -149,27 +157,121 @@ public class Visao {
                 float xp = i*resolucao+resolucao/2;
                 float yp = j*resolucao+resolucao/2;
                 // Calcula o angulo do alvo
-                float ang = (float) Math.PI/2 - (float) Math.atan2(alvo.y - yp, alvo.x - xp);
+                float ang = (float) Math.PI/2 - atan2(alvo.y - yp, alvo.x - xp);
                 // Vetores
-                float ampX = intensidade * (float) Math.cos(ang) / distSq(xp, yp, alvo.x, alvo.y);
-                float ampY = intensidade * (float) Math.sin(ang) / distSq(xp, yp, alvo.x, alvo.y);
+                float ampX = intensidade * cos(ang) / distSq(xp, yp, alvo.x, alvo.y);
+                float ampY = intensidade * sin(ang) / distSq(xp, yp, alvo.x, alvo.y);
                 // Calcula o campo dos obstáculos
                 for(PVector obs : obstaculos) {
                     // Calcula o angulo do obstáculo
-                    ang = (float) - Math.PI/2 - (float) Math.atan2(obs.y - yp, obs.x - xp);
+                    ang = (float) - Math.PI/2 - atan2(obs.y - yp, obs.x - xp);
                     // Calcula os vetores x e y
-                    ampX += (float) Math.cos(ang) / distSq(xp, yp, obs.x, obs.y);
-                    ampY += (float) Math.sin(ang) / distSq(xp, yp, obs.x, obs.y);
+                    ampX += cos(ang) / distSq(xp, yp, obs.x, obs.y);
+                    ampY += sin(ang) / distSq(xp, yp, obs.x, obs.y);
+                }
+                for(PVector obs : obsVirtuais){
+                    // Calcula o angulo do obstáculo
+                    ang = (float) - Math.PI/2 - atan2(obs.y - yp, obs.x - xp);
+                    // Calcula os vetores x e y
+                    ampX += cos(ang) / distSq(xp, yp, obs.x, obs.y) / 10;
+                    ampY += sin(ang) / distSq(xp, yp, obs.x, obs.y) / 10;
                 }
                 // A amplitude total é a soma vetorial do alvo com todos os obstáculos
                 float amp = (float) Math.sqrt(ampX*ampX + ampY*ampY);
-                ang = (float) Math.atan2(ampY, ampX);
-                campo[i][j] = new PVector(amp * (float) Math.cos(ang), amp * (float) Math.sin(ang));
+                ang = atan2(ampY, ampX);
+                campo[i][j] = new PVector(amp * cos(ang), amp * sin(ang));
             }
-          }
+        }
+
+        if(!debug) return campo;
+
+        // Desenha as setas
+        for(int i=0; i<qx; i++) {
+            for(int j=0; j<qy; j++) {
+                float xp = i*resolucao+resolucao/2;
+                float yp = j*resolucao+resolucao/2;
+                float amp = (float) Math.sqrt(campo[i][j].x*campo[i][j].x + campo[i][j].y*campo[i][j].y);
+                float ang = atan2(campo[i][j].y, campo[i][j].x);
+                seta(xp, yp, amp, ang, resolucao);
+            }
+        }
 
         return campo;
     }
+
+    void seta(float x, float y, float amp, float ang, float res) {
+        app.stroke(255);
+        app.strokeWeight(1);
+        float nAmp = PApplet.map(amp, 0f, 1/(res*res), res / 10, res / 2);
+        if(nAmp > res/2) nAmp = res/2;
+        float xp = x + nAmp * sin(ang);
+        float yp = y + nAmp * cos(ang);
+        app.line(xp, yp, x - nAmp * sin(ang), y - nAmp * cos(ang));
+        app.line(xp, yp, xp - nAmp * sin((float) Math.PI/6 + ang), yp - nAmp * cos((float) Math.PI/6 + ang));
+        app.line(xp, yp, xp - nAmp * sin((float)-Math.PI/6 + ang), yp - nAmp * cos((float)-Math.PI/6 + ang));
+    }
+
+
+    /**
+	 * Retorna um array com a sequencia de células ideal
+	 * 
+	 * @param origem coordenada da origem
+     * @param campo array com os vetores do campo
+     * @param debug mostra as setas na tela
+     * @return PVector[][]
+	 */
+    public int[][] trajeto(PVector origem, PVector[][] campo, boolean debug) {
+        // calcula a resolução
+        int res = app.width / campo.length;
+
+        // origem aproximada
+        int x = (int) origem.x / res;
+        int y = (int) origem.y / res;
+
+        // destino aproximado
+        // int Dx = (int) destino.x / res;
+        // int Dy = (int) destino.y / res;
+
+        int[][] trajeto = new int[30][2];
+        trajeto[0][0] = x;
+        trajeto[0][1] = y;
+
+        int passo = 1;
+
+        while(x < campo.length && x >= 0 && y < campo[0].length && y >= 0 && passo < 30) {
+
+            float ang = atan2(campo[x][y].y, campo[x][y].x);
+
+            // encontra a seta mais próxima
+            x = (int) (x * res + res/2 + res * cos(ang - (float) Math.PI/2)) / res;
+            // if(xb >= x) xb = x-1;
+            // if(xb < 0) xb = 0;
+            y = (int) (y * res + res/2 + res * sin(ang + (float) Math.PI/2)) / res;
+            // if(yb >= y) yb = y-1;
+            // if(yb < 0) yb = 0;
+            
+
+            trajeto[passo][0] = x;
+            trajeto[passo][1] = y;
+            passo++;
+
+            //println(xa, ya);
+        }
+
+        if(!debug) return trajeto;
+
+        // Desenha o trajeto
+        for(int i=0; i<trajeto.length - 1; i++) {
+            float xa = trajeto[i][0] * res + res/2;
+            float ya = trajeto[i][1] * res + res/2;
+            float xb = trajeto[i + 1][0] * res + res/2;
+            float yb = trajeto[i + 1][1] * res + res/2;
+            app.fill(255);
+            app.line(xa, ya, xb, yb);
+        }
+        
+        return trajeto;
+    } 
     
     // private static int red(int color) {
 	// 	int mask = 255<<16; //16711680
@@ -200,5 +302,15 @@ public class Visao {
     private float distSq(float x1, float y1, float x2, float y2) {
         return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
       }
+
+    private float sin(float ang) {
+        return (float) Math.sin(ang);
+    }
+    private float cos(float ang) {
+        return (float) Math.cos(ang);
+    }
+    private float atan2(float y, float x) {
+        return (float) Math.atan2(y, x);
+    }
     
 }

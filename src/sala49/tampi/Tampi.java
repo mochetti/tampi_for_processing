@@ -17,6 +17,12 @@ public class Tampi {
 
 	// Volume máximo lido pelo microfone
 	public int volumeMax = 1023;
+
+	// Raio da roda em metros
+	public float raioRoda = 0.01f;
+
+	// Ângulo do robo em radianos
+	public float ang = 0;
 	
 	public final static String VERSION = "##library.prettyVersion##";
 	
@@ -88,19 +94,55 @@ public class Tampi {
 	/**
 	 * Retorna a intensidade lida pelo ldr esquerdo.
 	 * 
-	 * @return float
+	 * @return int
 	 */
-	public float ldrEsq() {
-		return (float) Math.random() * 1023;
+	public int ldrEsq() {
+		return (int) (Math.random() * 1023);
 	}
 
 	/**
 	 * Retorna a intensidade lida pelo ldr direito.
 	 * 
+	 * @return int
+	 */
+	public int ldrDir() {
+		return (int) (Math.random() * 1023);
+	}
+
+	/**
+	 * Retorna a intensidade lida pelo IR esquerdo.
+	 * 
+	 * @return int
+	 */
+	public int irEsq() {
+		return (int) (Math.random() * 1023);
+	}
+
+	/**
+	 * Retorna a intensidade lida pelo IR direito.
+	 * 
+	 * @return int
+	 */
+	public int irDir() {
+		return (int) (Math.random() * 1023);
+	}
+
+	/**
+	 * Retorna a velocidade da roda esquerda em m/s.
+	 * 
 	 * @return float
 	 */
-	public float ldrDir() {
-		return (float) Math.random() * 1023;
+	public float velEsq() {
+		return (float) (Math.random() * 1023);
+	}
+
+	/**
+	 * Retorna a velocidade da roda direita em m/s.
+	 * 
+	 * @return float
+	 */
+	public float velDir() {
+		return (float) (Math.random() * 1023);
 	}
 
 
