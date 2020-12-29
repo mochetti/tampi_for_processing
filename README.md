@@ -4,7 +4,7 @@ Essa é a biblioteca que integra o Tampi ao Processing. Não conhece o Tampi ain
 
 ## Exemplos
 
-Os [exemplos](https://github.com/mochetti/tampi_lib/examples) são divididos em duas seções:
+Os [exemplos](https://github.com/mochetti/tampi_for_processing/examples) são divididos em duas seções:
 
 - Tampi: interagem diretamente com os sensores e atuadores do robô e dependem de um Tampi para funcionarem corretamente;
 
@@ -12,4 +12,4 @@ Os [exemplos](https://github.com/mochetti/tampi_lib/examples) são divididos em 
 
 ## Contribuição
 
-Todas as sugestões são bem vindas. Caso encontre um bug, fique à vontade para [abrir uma issue](https://github.com/mochetti/tampi_lib/issues/new).
+Todas as sugestões são bem vindas. Caso encontre um bug, fique à vontade para [abrir uma issue](https://github.com/mochetti/tampi_for_processing/issues/new).
