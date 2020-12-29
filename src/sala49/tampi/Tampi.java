@@ -1,7 +1,7 @@
 package sala49.tampi;
 
-
 import processing.core.PApplet;
+import processing.core.PVector;
 import websockets.WebsocketClient;
 
 public class Tampi {
@@ -23,6 +23,9 @@ public class Tampi {
 
 	// Ângulo do robo em radianos
 	public float ang = 0;
+
+	// Posição do Tampi em metros
+	PVector pos = new PVector(0, 0);
 	
 	public final static String VERSION = "##library.prettyVersion##";
 	
@@ -68,8 +71,13 @@ public class Tampi {
 		
 	}
 
-	
-	public void buzina() {
+	/**
+	 * Reproduz uma frequência na buzina
+	 * 
+	 * @param freq frequencia da onda sonora em Hz
+	 * @param tempo duração da nota em ms
+	 */
+	public void buzina(int freq, int tempo) {
 
 	}
 
@@ -153,6 +161,15 @@ public class Tampi {
 	 */
 	public static String version() {
 		return VERSION;
+	}
+
+	/**
+	 * Desenha o Tampi na tela
+	 * 
+	 */
+	public void desenha() {
+
+
 	}
 
 }

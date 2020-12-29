@@ -1,7 +1,6 @@
 package sala49.tampi;
 
-import processing.core.*;
-
+import processing.core.PVector;
 
 // Classe que gerencia os objetos lidos pela camera baseado na cor
 
