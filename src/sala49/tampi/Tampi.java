@@ -93,9 +93,18 @@ public class Tampi {
 	/**
 	 * Retorna o volume lido pelo microfone.
 	 * 
+	 * @return int
+	 */
+	public int volMic() {
+		return (int) Math.random() * 1023;
+	}
+
+	/**
+	 * Retorna a frequência em Hz lida pelo microfone.
+	 * 
 	 * @return float
 	 */
-	public float microfone() {
+	public float freqMic() {
 		return (float) Math.random() * 1023;
 	}
 

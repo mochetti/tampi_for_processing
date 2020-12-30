@@ -7,7 +7,6 @@ Essa é a biblioteca que integra o Tampi ao Processing. Não conhece o Tampi ain
 Os [exemplos](https://github.com/mochetti/tampi_for_processing/tree/master/examples) são divididos em duas seções:
 
 - Tampi: interagem diretamente com os sensores e atuadores do robô e dependem de um Tampi para funcionarem corretamente;
-
 - Visão: são funções de computação gráfica que não necessariamente precisam ser utilizadas com o Tampi.
 
 ## Contribuição
