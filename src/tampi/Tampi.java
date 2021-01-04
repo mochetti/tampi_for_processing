@@ -1,4 +1,4 @@
-package sala49.tampi;
+package tampi;
 
 import processing.core.PApplet;
 import processing.core.PVector;
@@ -36,13 +36,20 @@ public class Tampi {
 	 */
 	public Tampi(PApplet theParent) {
 		app = theParent;
-		System.out.println("##library.name## ##library.prettyVersion## by ##author##");
+		System.out.println("##library.name## ##library.prettyVersion## by ##author.name##");
+		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "error");
 	}
 
 	public void init() {
 		// Connect using default address
-		client = new WebsocketClient(app, "ws://192.168.4.1:81");
-		// client.sendMessage("message");
+		client = new WebsocketClient(app, this, "ws://192.168.4.1:81");
+		client.sendMessage("message");
+	}
+
+	// Callback para os eventos do websocket
+	public void webSocketEvent(String msg) {
+		System.out.println(msg);
+
 	}
 
 	public void andar() {

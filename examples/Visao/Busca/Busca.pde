@@ -7,7 +7,7 @@
   Tampi for Processing
 */
 
-import sala49.tampi.*;
+import tampi.*;
 
 Visao visao;
 color cor;

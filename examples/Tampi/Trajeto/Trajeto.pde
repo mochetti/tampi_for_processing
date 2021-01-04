@@ -4,7 +4,7 @@
   Tampi for Processing
 */
 
-import sala49.tampi.*;
+import tampi.*;
 
 Tampi t;
 PVector pos;

@@ -1,4 +1,4 @@
-import sala49.tampi.*;
+import tampi.*;
 
 Tampi t;
 void setup() {
@@ -6,8 +6,4 @@ void setup() {
     t.init();
 }
 void draw() {
-}
-
-void webSocketEvent(String msg){
-    println(msg);
 }

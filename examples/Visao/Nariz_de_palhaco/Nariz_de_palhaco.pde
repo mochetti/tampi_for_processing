@@ -1,6 +1,6 @@
 // Necessita da biblioteca de video do Processing
 import processing.video.*;
-//import sala49.tampi.*;
+//import tampi.*;
 
 Capture cam;
 //Tampi t;

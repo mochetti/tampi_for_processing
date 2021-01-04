@@ -1,4 +1,4 @@
-package sala49.tampi;
+package tampi;
 
 import processing.core.PVector;
 
