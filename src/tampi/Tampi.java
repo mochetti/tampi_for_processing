@@ -1,5 +1,7 @@
 package tampi;
 
+import java.util.Arrays;
+
 import processing.core.PApplet;
 import processing.core.PVector;
 import websockets.WebsocketClient;
@@ -10,13 +12,31 @@ public class Tampi {
 	PApplet app;
 
 	// Create websocket client object
-	WebsocketClient client;
+	WebsocketClient ws;
+
+	// Armazena leituras dos sensores
+	int[] sensores = new int[35];
+	/* 
+	0 - bat
+	1 - mic (volume)
+	2 - mic (frequencia) em Hz
+	3 - ldr esquerdo
+	4 - ldr direito
+	5 - encoder esquerdo
+	6 - encoder direito
+	7 - IR esquerdo
+	8 - IR direito
+	9 : 16 - tampinhas topo
+	17 : 22 - tampinhas esquerda
+	23 : 28 - tampinhas direita
+	29 : 32 - analog extras
+	33 - velocidade esquerda em mm/s
+	34 - velocidade direita em mm/s
+	35 - distancia em mm
+	*/
 
 	// Distancia máxima lida pelo ultrassônico
 	public int distanciaMax = 40;
-
-	// Volume máximo lido pelo microfone
-	public int volumeMax = 1023;
 
 	// Raio da roda em metros
 	public float raioRoda = 0.01f;
@@ -26,6 +46,9 @@ public class Tampi {
 
 	// Posição do Tampi em metros
 	PVector pos = new PVector(0, 0);
+
+	// Tempo para evitar sobrecargar no websocket
+	public long ultimaAtualizacao = 0;
 	
 	public final static String VERSION = "##library.prettyVersion##";
 	
@@ -41,23 +64,49 @@ public class Tampi {
 	}
 
 	public void init() {
-		// Connect using default address
-		client = new WebsocketClient(app, this, "ws://192.168.4.1:81");
-		client.sendMessage("message");
+		// Conecta ao servidor no endereço padrão
+		ws = new WebsocketClient(app, this, "ws://192.168.4.1:81");
+		// Se identifica como PC
+		ws.sendMessage("cp");
 	}
 
 	// Callback para os eventos do websocket
 	public void webSocketEvent(String msg) {
-		System.out.println(msg);
+		// System.out.println(msg);
 
+		// Verifica se estamos recebendo as leituras dos sensores
+		if(msg.startsWith("s")) {
+			String valores = msg.substring(1, msg.length());
+			String[] leituras = valores.split(",");
+			for(int i=0; i<leituras.length; i++) {
+				try {
+					sensores[i] = Integer.parseInt(leituras[i]);
+					}
+				catch (NumberFormatException e)
+					{
+					sensores[i] = 0;
+					}
+			}
+		}
+	}
+
+	/**
+	* Comando para atualizar os valores dos sensores
+	*
+	*/
+	public void atualiza() {
+		if(app.millis() - ultimaAtualizacao > 100) {
+			ultimaAtualizacao = app.millis();
+			ws.sendMessage("a");
+		}
 	}
 
 	public void andar() {
-		client.sendMessage("a");
+		// ws.sendMessage("a");
 	}
 
 	public void andar(float qnt) {
-		client.sendMessage("a" + qnt + "e");
+		// ws.sendMessage("a" + qnt + "e");
 	}
 
 	/**
@@ -74,27 +123,41 @@ public class Tampi {
 	 * 
 	 * @param ang angulo de giro. ang > 0 = horário e ang < 0 = antihorário
 	 */
-	public void girar(float ang) {
-		
+	public void girar(int ang) {
+		ws.sendMessage("g" + String.valueOf(ang));
 	}
 
 	/**
 	 * Reproduz uma frequência na buzina
 	 * 
 	 * @param freq frequencia da onda sonora em Hz
-	 * @param tempo duração da nota em ms
 	 */
-	public void buzina(int freq, int tempo) {
-
+	public void buzina(int freq) {
+		ws.sendMessage("");
 	}
 
 	/**
-	 * Retorna a distância lida pelo ultrassônico em centímetros.
+	 * Acende ou apaga os faróis do Tampi
 	 * 
-	 * @return float
+	 * @param aceso true -> acende; false -> apaga
 	 */
-	public float distancia() {
-		return (float) Math.random() * 40;
+	public void farol(boolean aceso) {
+		if(aceso) ws.sendMessage("f0");
+		else ws.sendMessage("f1");
+	}
+
+	/**
+	 * Retorna a tensão da bateria entre 0:1023
+	 * 
+	 * @return int
+	 */
+	public int bateria() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[0];
+	}
+	public int bateria(boolean atualiza) {
+		if(!atualiza) return sensores[0];
+		else return bateria();
 	}
 
 	/**
@@ -103,16 +166,26 @@ public class Tampi {
 	 * @return int
 	 */
 	public int volMic() {
-		return (int) Math.random() * 1023;
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[1];
+	}
+	public int volMic(boolean atualiza) {
+		if(!atualiza) return sensores[1];
+		else return volMic();
 	}
 
 	/**
 	 * Retorna a frequência em Hz lida pelo microfone.
 	 * 
-	 * @return float
+	 * @return int
 	 */
-	public float freqMic() {
-		return (float) Math.random() * 1023;
+	public int freqMic() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[2];
+	}
+	public int freqMic(boolean atualiza) {
+		if(!atualiza) return sensores[2];
+		else return freqMic();
 	}
 
 	/**
@@ -121,7 +194,12 @@ public class Tampi {
 	 * @return int
 	 */
 	public int ldrEsq() {
-		return (int) (Math.random() * 1023);
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[3];
+	}
+	public int ldrEsq(boolean atualiza) {
+		if(!atualiza) return sensores[3];
+		else return ldrEsq();
 	}
 
 	/**
@@ -130,7 +208,40 @@ public class Tampi {
 	 * @return int
 	 */
 	public int ldrDir() {
-		return (int) (Math.random() * 1023);
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[4];
+	}
+	public int ldrDir(boolean atualiza) {
+		if(!atualiza) return sensores[4];
+		else return ldrDir();
+	}
+
+	/**
+	 * Retorna a intensidade lida pelo encoder esquerdo.
+	 * 
+	 * @return int
+	 */
+	public int encoderEsq() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[5];
+	}
+	public int encoderEsq(boolean atualiza) {
+		if(!atualiza) return sensores[5];
+		else return encoderEsq();
+	}
+
+	/**
+	 * Retorna a intensidade lida pelo encoder direito.
+	 * 
+	 * @return int
+	 */
+	public int encoderDir() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[6];
+	}
+	public int encoderDir(boolean atualiza) {
+		if(!atualiza) return sensores[6];
+		else return encoderDir();
 	}
 
 	/**
@@ -139,7 +250,12 @@ public class Tampi {
 	 * @return int
 	 */
 	public int irEsq() {
-		return (int) (Math.random() * 1023);
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[7];
+	}
+	public int irEsq(boolean atualiza) {
+		if(!atualiza) return sensores[7];
+		else return irEsq();
 	}
 
 	/**
@@ -148,27 +264,165 @@ public class Tampi {
 	 * @return int
 	 */
 	public int irDir() {
-		return (int) (Math.random() * 1023);
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[8];
+	}
+	public int irDir(boolean atualiza) {
+		if(!atualiza) return sensores[8];
+		else return irDir();
 	}
 
 	/**
-	 * Retorna a velocidade da roda esquerda em m/s.
+	 * Retorna as leituras das tampinhas do topo
 	 * 
-	 * @return float
+	 * @return int[]
 	 */
-	public float velEsq() {
-		return (float) (Math.random() * 1023);
+	public int[] tampinhasTopo() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		int[] valores = Arrays.copyOfRange(sensores, 9, 16 + 1);
+		return valores;
+	}
+	public int[] tampinhasTopo(boolean atualiza) {
+		if(!atualiza) {
+			int[] valores = Arrays.copyOfRange(sensores, 9, 16 + 1);
+			return valores;
+		}
+		else return tampinhasTopo();
 	}
 
 	/**
-	 * Retorna a velocidade da roda direita em m/s.
+	 * Retorna as leituras das tampinhas da esquerda
 	 * 
-	 * @return float
+	 * @return int[]
 	 */
-	public float velDir() {
-		return (float) (Math.random() * 1023);
+	public int[] tampinhasEsq() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		int[] valores = Arrays.copyOfRange(sensores, 17, 22 + 1);
+		return valores;
+	}
+	public int[] tampinhasEsq(boolean atualiza) {
+		if(!atualiza) {
+			int[] valores = Arrays.copyOfRange(sensores, 17, 22 + 1);
+			return valores;
+		}
+		else return tampinhasEsq();
 	}
 
+	/**
+	 * Retorna as leituras das tampinhas da direita
+	 * 
+	 * @return int[]
+	 */
+	public int[] tampinhasDir() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		int[] valores = Arrays.copyOfRange(sensores, 23, 28 + 1);
+		return valores;
+	}
+	public int[] tampinhasDir(boolean atualiza) {
+		if(!atualiza) {
+			int[] valores = Arrays.copyOfRange(sensores, 23, 28 + 1);
+			return valores;
+		}
+		else return tampinhasDir();
+	}
+
+	/**
+	 * Retorna a leitura do pino analógico extra 1.
+	 * 
+	 * @return int
+	 */
+	public int aExtra1() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[29];
+	}
+	public int aExtra1(boolean atualiza) {
+		if(!atualiza) return sensores[29];
+		else return aExtra1();
+	}
+
+	/**
+	 * Retorna a leitura do pino analógico extra 2.
+	 * 
+	 * @return int
+	 */
+	public int aExtra2() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[30];
+	}
+	public int aExtra2(boolean atualiza) {
+		if(!atualiza) return sensores[30];
+		else return aExtra2();
+	}
+
+	/**
+	 * Retorna a leitura do pino analógico extra 3.
+	 * 
+	 * @return int
+	 */
+	public int aExtra3() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[31];
+	}
+	public int aExtra3(boolean atualiza) {
+		if(!atualiza) return sensores[31];
+		else return aExtra3();
+	}
+
+	/**
+	 * Retorna a leitura do pino analógico extra 4.
+	 * 
+	 * @return int
+	 */
+	public int aExtra4() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[32];
+	}
+	public int aExtra4(boolean atualiza) {
+		if(!atualiza) return sensores[32];
+		else return aExtra4();
+	}
+
+	/**
+	 * Retorna a velocidade da roda esquerda em mm/s.
+	 * 
+	 * @return int
+	 */
+	public int velEsq() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[33];
+	}
+	public int velEsq(boolean atualiza) {
+		if(!atualiza) return sensores[33];
+		else return velEsq();
+	}
+
+	/**
+	 * Retorna a velocidade da roda direita em mm/s.
+	 * 
+	 * @return int
+	 */
+	public int velDir() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[34];
+	}
+	public int velDir(boolean atualiza) {
+		if(!atualiza) return sensores[34];
+		else return velDir();
+	}
+
+	/**
+	 * Retorna a distância lida pelo ultrassônico em milímetros.
+	 * 
+	 * @return int
+	 */
+	public int distancia() {
+		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		return sensores[35];
+	}
+	public int distancia(boolean atualiza) {
+		if(!atualiza) return sensores[35];
+		else return distancia();
+	}
 
 	/**
 	 * return the version of the Library.

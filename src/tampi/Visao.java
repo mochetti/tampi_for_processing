@@ -206,10 +206,10 @@ public class Visao {
         int[] aux = {x, y};
         trajetoAux.add(aux);
 
-        int passo = 1;
+        boolean existe = false;
 
         // Itera enquanto estiver dentro do campo até o tamanho do array
-        while(x < campo.length && x >= 0 && y < campo[0].length && y >= 0 && passo < 30) {
+        while(x < campo.length && x >= 0 && y < campo[0].length && y >= 0 && !existe) {
 
             float ang = atan2(campo[x][y].y, campo[x][y].x);
 
@@ -217,13 +217,18 @@ public class Visao {
             x = (int) (x * res + res/2 + res * cos(ang - (float) Math.PI/2)) / res;
             y = (int) (y * res + res/2 + res * sin(ang + (float) Math.PI/2)) / res;
 
-            // adiciona a coordenada ao array trajeto
-            aux[0] = x;
-            aux[1] = y;
-            trajetoAux.add(aux);
-            passo++;
-
-            //println(xa, ya);
+            // verifica se é um ponto repetido
+            
+            for(int[] i : trajetoAux) {
+                if(x == i[0] && y == i[1]) existe = true;
+            }
+            if(!existe) {
+                // adiciona a coordenada ao array trajeto
+                aux = new int[2];
+                aux[0] = x;
+                aux[1] = y;
+                trajetoAux.add(aux);
+            }
         }
 
         // Array de tamanho fixo com as células do trajeto
@@ -231,6 +236,7 @@ public class Visao {
         for(int i=0; i<trajeto.length; i++) {
             trajeto[i] = trajetoAux.get(i);
         }
+        
         if(!debug) return trajeto;
 
         // Desenha o trajeto
