@@ -7,7 +7,7 @@ import processing.core.PVector;
 import websockets.WebsocketClient;
 
 public class Tampi {
-	
+
 	// Referência ao sketch
 	PApplet app;
 
@@ -16,30 +16,22 @@ public class Tampi {
 
 	// Armazena leituras dos sensores
 	int[] sensores = new int[35];
-	/* 
-	0 - bat
-	1 - mic (volume)
-	2 - mic (frequencia) em Hz
-	3 - ldr esquerdo
-	4 - ldr direito
-	5 - encoder esquerdo
-	6 - encoder direito
-	7 - IR esquerdo
-	8 - IR direito
-	9 : 16 - tampinhas topo
-	17 : 22 - tampinhas esquerda
-	23 : 28 - tampinhas direita
-	29 : 32 - analog extras
-	33 - velocidade esquerda em mm/s
-	34 - velocidade direita em mm/s
-	35 - distancia em mm
-	*/
+	/*
+	 * 0 - bat 1 - mic (volume) 2 - mic (frequencia) em Hz 3 - ldr esquerdo 4 - ldr
+	 * direito 5 - encoder esquerdo 6 - encoder direito 7 - IR esquerdo 8 - IR
+	 * direito 9 : 16 - tampinhas topo 17 : 22 - tampinhas esquerda 23 : 28 -
+	 * tampinhas direita 29 : 32 - analog extras 33 - velocidade esquerda em mm/s 34
+	 * - velocidade direita em mm/s 35 - distancia em mm
+	 */
 
 	// Distancia máxima lida pelo ultrassônico
 	public int distanciaMax = 40;
 
 	// Raio da roda em metros
 	public float raioRoda = 0.01f;
+
+	//
+	public int velocidade = 100;
 
 	// Ângulo do robo em radianos
 	public float ang = 0;
@@ -49,9 +41,15 @@ public class Tampi {
 
 	// Tempo para evitar sobrecargar no websocket
 	public long ultimaAtualizacao = 0;
-	
+
+	// Controla se o sketch está conectado
+	public boolean conectado = false;
+
+	// Controla se estamos esperando uma resposta do Tampi
+	public boolean espera = false;
+
 	public final static String VERSION = "##library.prettyVersion##";
-	
+
 	/**
 	 * Construtor
 	 * 
@@ -65,48 +63,104 @@ public class Tampi {
 
 	public void init() {
 		// Conecta ao servidor no endereço padrão
-		ws = new WebsocketClient(app, this, "ws://192.168.4.1:81");
-		// Se identifica como PC
-		ws.sendMessage("cp");
+		init(true);
+	}
+
+	public void init(boolean wait) {
+		ws = new WebsocketClient(app, this, "ws://192.168.4.1:81", wait);
+		espera = true;
+		app.delay(50);
 	}
 
 	// Callback para os eventos do websocket
 	public void webSocketEvent(String msg) {
-		// System.out.println(msg);
+
+		System.out.println("Recebido: " + msg);
+
+		// Primeira mensagem do servidor
+		if (msg.startsWith("oi")) {
+			conectado = true;
+			espera = false;
+			// Se identifica como PC
+			ws.sendMessage("cp");
+		}
+
+		// Verifica se o tempo de espera acabou
+		else if (msg.startsWith("e")) {
+			espera = false;
+		}
 
 		// Verifica se estamos recebendo as leituras dos sensores
-		if(msg.startsWith("s")) {
+		else if (msg.startsWith("s")) {
 			String valores = msg.substring(1, msg.length());
 			String[] leituras = valores.split(",");
-			for(int i=0; i<leituras.length; i++) {
+			for (int i = 0; i < leituras.length; i++) {
 				try {
 					sensores[i] = Integer.parseInt(leituras[i]);
-					}
-				catch (NumberFormatException e)
-					{
-					sensores[i] = 0;
-					}
+				} catch (NumberFormatException e) {
+					sensores[i] = -1;
+				}
 			}
+		}
+
+		else {
+			System.out.println("Recebido: " + msg);
+		}
+	}
+
+	public void webSocketOnError(Throwable error) {
+		switch (error.getMessage()) {
+			case "Connect Timeout":
+				System.out.println("Erro: Não foi possível se conectar ao Tampi");
+				break;
+
+			default:
+				System.out.println(error.getMessage());
+				break;
 		}
 	}
 
 	/**
-	* Comando para atualizar os valores dos sensores
-	*
-	*/
+	 * Comando para atualizar os valores dos sensores
+	 *
+	 */
 	public void atualiza() {
-		if(app.millis() - ultimaAtualizacao > 100) {
+		if (app.millis() - ultimaAtualizacao > 100) {
 			ultimaAtualizacao = app.millis();
-			ws.sendMessage("a");
+			enviar("s");
 		}
 	}
 
-	public void andar() {
-		// ws.sendMessage("a");
+	public void enviar(String msg) {
+		while (espera) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		espera = true;
+		ws.sendMessage(msg);
 	}
 
-	public void andar(float qnt) {
-		// ws.sendMessage("a" + qnt + "e");
+	/**
+	 * Anda o Tampi em linha reta indefinidamente
+	 * 
+	 * @param sentido sentido de movimento. true = frente e false = trás
+	 */
+	public void andar(boolean sentido) {
+		if(sentido) enviar("m" + String.valueOf(velocidade) + ',' + String.valueOf(velocidade));
+		else enviar("m" + String.valueOf(-velocidade) + ',' + String.valueOf(-velocidade));
+	}
+
+	/**
+	 * Anda o Tampi em linha reta por uma distância específica
+	 * 
+	 * @param distancia distância em mm
+	 */
+	public void andar(int distancia) {
+		enviar("a" + String.valueOf(distancia));
 	}
 
 	/**
@@ -115,16 +169,17 @@ public class Tampi {
 	 * @param sentido sentido de rotação. true = horário e false = antihorário
 	 */
 	public void girar(boolean sentido) {
-
+		if(sentido) enviar("m" + String.valueOf(velocidade) + ',' + String.valueOf(-velocidade));
+		else enviar("m" + String.valueOf(-velocidade) + ',' + String.valueOf(velocidade));
 	}
 
 	/**
-	 * Rotaciona o Tampi no próprio eixo ang graus
+	 * Rotaciona o Tampi no próprio eixo por ângulo específico
 	 * 
-	 * @param ang angulo de giro. ang > 0 = horário e ang < 0 = antihorário
+	 * @param angulo angulo de giro. ang > 0 = horário e ang < 0 = antihorário
 	 */
-	public void girar(int ang) {
-		ws.sendMessage("g" + String.valueOf(ang));
+	public void girar(int angulo) {
+		enviar("g" + angulo);
 	}
 
 	/**
@@ -133,7 +188,7 @@ public class Tampi {
 	 * @param freq frequencia da onda sonora em Hz
 	 */
 	public void buzina(int freq) {
-		ws.sendMessage("");
+		enviar("");
 	}
 
 	/**
@@ -142,8 +197,8 @@ public class Tampi {
 	 * @param aceso true -> acende; false -> apaga
 	 */
 	public void farol(boolean aceso) {
-		if(aceso) ws.sendMessage("f0");
-		else ws.sendMessage("f1");
+		if(aceso) enviar("f0");
+		else enviar("f1");
 	}
 
 	/**
