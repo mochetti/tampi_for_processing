@@ -17,11 +17,20 @@ public class Tampi {
 	// Armazena leituras dos sensores
 	int[] sensores = new int[35];
 	/*
-	 * 0 - bat 1 - mic (volume) 2 - mic (frequencia) em Hz 3 - ldr esquerdo 4 - ldr
-	 * direito 5 - encoder esquerdo 6 - encoder direito 7 - IR esquerdo 8 - IR
-	 * direito 9 : 16 - tampinhas topo 17 : 22 - tampinhas esquerda 23 : 28 -
-	 * tampinhas direita 29 : 32 - analog extras 33 - velocidade esquerda em mm/s 34
-	 * - velocidade direita em mm/s 35 - distancia em mm
+	 * 0 - bat 1 - mic (volume)
+	 * 2 - mic (frequencia) em Hz
+	 * 3 - ldr esquerdo 
+	 * 4 - ldr direito
+	 * 5 - encoder esquerdo
+	 * 6 - encoder direito
+	 * 7 - IR esquerdo 8 - IR direito
+	 * 9 : 16 - tampinhas topo
+	 * 17 : 22 - tampinhas esquerda
+	 * 23 : 28 - tampinhas direita
+	 * 29 : 32 - analog extras
+	 * 33 - velocidade esquerda em mm/s
+	 * 34 - velocidade direita em mm/s
+	 * 35 - distancia em mm
 	 */
 
 	// Distancia máxima lida pelo ultrassônico
@@ -40,7 +49,8 @@ public class Tampi {
 	PVector pos = new PVector(0, 0);
 
 	// Tempo para evitar sobrecargar no websocket
-	public long ultimaAtualizacao = 0;
+	public long ultimaMsg = 0;
+	public long ultimoComando = 0;
 
 	// Controla se o sketch está conectado
 	public boolean conectado = false;
@@ -69,7 +79,15 @@ public class Tampi {
 	public void init(boolean wait) {
 		ws = new WebsocketClient(app, this, "ws://192.168.4.1:81", wait);
 		espera = true;
-		app.delay(50);
+		while (espera) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		// Se identifica como PC
+		enviar("cp", true);
 	}
 
 	// Callback para os eventos do websocket
@@ -81,8 +99,6 @@ public class Tampi {
 		if (msg.startsWith("oi")) {
 			conectado = true;
 			espera = false;
-			// Se identifica como PC
-			ws.sendMessage("cp");
 		}
 
 		// Verifica se o tempo de espera acabou
@@ -114,6 +130,10 @@ public class Tampi {
 				System.out.println("Erro: Não foi possível se conectar ao Tampi");
 				break;
 
+			case "Network is unreachable":
+				System.out.println("Erro: Parece que não estamos conectados na rede do Tampi. Conecte-se à rede primeiro!");
+				break;
+
 			default:
 				System.out.println(error.getMessage());
 				break;
@@ -125,23 +145,52 @@ public class Tampi {
 	 *
 	 */
 	public void atualiza() {
-		if (app.millis() - ultimaAtualizacao > 100) {
-			ultimaAtualizacao = app.millis();
-			enviar("s");
+		if (app.millis() - ultimaMsg > 100) {
+			ultimaMsg = app.millis();
+			ws.sendMessage("s");
 		}
 	}
 
-	public void enviar(String msg) {
-		while (espera) {
-			try {
-				Thread.sleep(10);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+	/**
+	 * Envia comandos para o servidor websocket
+	 * 
+	 * @param msg mensagem
+	 * @param esperar controla se devemos esperar resposta do servidor
+	 */
+	public void enviar(String msg, boolean esperar) {
+		if(app.millis() - ultimaMsg < 100) return;
+		if(esperar) {
+			espera = true;
+			ultimoComando = app.millis();
+			ws.sendMessage(msg + ';');
+			while (espera) {
+				// Espera confirmação por 10 segundos
+				if(app.millis() - ultimoComando < 10000) {
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				else {
+					System.out.println("Erro: Não houve resposta do Tampi");
+					break;
+				}
 			}
 		}
-		espera = true;
-		ws.sendMessage(msg);
+		else {
+			ultimaMsg = app.millis();
+			ws.sendMessage(msg + ';');
+		}
+	}
+
+	/**
+	 * 
+	 * @param velE velocidade da roda esquerda entre 0 e 1023
+	 * @param velD velocidade da roda direita entre 0 e 1023
+	 */
+	public void motor(int velE, int velD) {
+		enviar("m" + velE + ',' + velD, false);
 	}
 
 	/**
@@ -150,8 +199,19 @@ public class Tampi {
 	 * @param sentido sentido de movimento. true = frente e false = trás
 	 */
 	public void andar(boolean sentido) {
-		if(sentido) enviar("m" + String.valueOf(velocidade) + ',' + String.valueOf(velocidade));
-		else enviar("m" + String.valueOf(-velocidade) + ',' + String.valueOf(-velocidade));
+		if(sentido) motor(velocidade, velocidade);
+		else motor(-velocidade, -velocidade);
+	}
+
+	/**
+	 * Anda o Tampi em linha reta indefinidamente numa velocidade específica
+	 * 
+	 * @param sentido sentido de movimento. true = frente e false = trás
+	 * @param velocidade velocidade entre 0 e 1023
+	 */
+	public void andar(boolean sentido, int vel) {
+		if(sentido) motor(vel, vel);
+		else motor(-vel, -vel);
 	}
 
 	/**
@@ -160,7 +220,7 @@ public class Tampi {
 	 * @param distancia distância em mm
 	 */
 	public void andar(int distancia) {
-		enviar("a" + String.valueOf(distancia));
+		enviar("a" + distancia, true);
 	}
 
 	/**
@@ -169,8 +229,18 @@ public class Tampi {
 	 * @param sentido sentido de rotação. true = horário e false = antihorário
 	 */
 	public void girar(boolean sentido) {
-		if(sentido) enviar("m" + String.valueOf(velocidade) + ',' + String.valueOf(-velocidade));
-		else enviar("m" + String.valueOf(-velocidade) + ',' + String.valueOf(velocidade));
+		if(sentido) motor(velocidade, -velocidade);
+		else motor(-velocidade, velocidade);
+	}
+
+	/**
+	 * Rotaciona o Tampi no próprio eixo indefinidamente numa velocidade específica
+	 * 
+	 * @param sentido sentido de rotação. true = horário e false = antihorário
+	 */
+	public void girar(boolean sentido, int vel) {
+		if(sentido) motor(vel, -vel);
+		else motor(-vel, vel);
 	}
 
 	/**
@@ -179,7 +249,7 @@ public class Tampi {
 	 * @param angulo angulo de giro. ang > 0 = horário e ang < 0 = antihorário
 	 */
 	public void girar(int angulo) {
-		enviar("g" + angulo);
+		enviar("g" + angulo, true);
 	}
 
 	/**
@@ -188,7 +258,7 @@ public class Tampi {
 	 * @param freq frequencia da onda sonora em Hz
 	 */
 	public void buzina(int freq) {
-		enviar("");
+		enviar("", false);
 	}
 
 	/**
@@ -197,8 +267,8 @@ public class Tampi {
 	 * @param aceso true -> acende; false -> apaga
 	 */
 	public void farol(boolean aceso) {
-		if(aceso) enviar("f0");
-		else enviar("f1");
+		if(aceso) enviar("f0", false);
+		else enviar("f1", false);
 	}
 
 	/**
@@ -207,7 +277,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int bateria() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[0];
 	}
 	public int bateria(boolean atualiza) {
@@ -221,7 +291,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int volMic() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[1];
 	}
 	public int volMic(boolean atualiza) {
@@ -235,7 +305,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int freqMic() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[2];
 	}
 	public int freqMic(boolean atualiza) {
@@ -249,7 +319,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int ldrEsq() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[3];
 	}
 	public int ldrEsq(boolean atualiza) {
@@ -263,7 +333,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int ldrDir() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[4];
 	}
 	public int ldrDir(boolean atualiza) {
@@ -277,7 +347,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int encoderEsq() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[5];
 	}
 	public int encoderEsq(boolean atualiza) {
@@ -291,7 +361,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int encoderDir() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[6];
 	}
 	public int encoderDir(boolean atualiza) {
@@ -305,7 +375,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int irEsq() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[7];
 	}
 	public int irEsq(boolean atualiza) {
@@ -319,7 +389,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int irDir() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[8];
 	}
 	public int irDir(boolean atualiza) {
@@ -333,7 +403,7 @@ public class Tampi {
 	 * @return int[]
 	 */
 	public int[] tampinhasTopo() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		int[] valores = Arrays.copyOfRange(sensores, 9, 16 + 1);
 		return valores;
 	}
@@ -351,7 +421,7 @@ public class Tampi {
 	 * @return int[]
 	 */
 	public int[] tampinhasEsq() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		int[] valores = Arrays.copyOfRange(sensores, 17, 22 + 1);
 		return valores;
 	}
@@ -369,7 +439,7 @@ public class Tampi {
 	 * @return int[]
 	 */
 	public int[] tampinhasDir() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		int[] valores = Arrays.copyOfRange(sensores, 23, 28 + 1);
 		return valores;
 	}
@@ -387,7 +457,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int aExtra1() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[29];
 	}
 	public int aExtra1(boolean atualiza) {
@@ -401,7 +471,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int aExtra2() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[30];
 	}
 	public int aExtra2(boolean atualiza) {
@@ -415,7 +485,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int aExtra3() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[31];
 	}
 	public int aExtra3(boolean atualiza) {
@@ -429,7 +499,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int aExtra4() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[32];
 	}
 	public int aExtra4(boolean atualiza) {
@@ -443,7 +513,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int velEsq() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[33];
 	}
 	public int velEsq(boolean atualiza) {
@@ -457,7 +527,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int velDir() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[34];
 	}
 	public int velDir(boolean atualiza) {
@@ -471,7 +541,7 @@ public class Tampi {
 	 * @return int
 	 */
 	public int distancia() {
-		if(app.millis() - ultimaAtualizacao > 300) atualiza();
+		atualiza();
 		return sensores[35];
 	}
 	public int distancia(boolean atualiza) {
@@ -493,7 +563,9 @@ public class Tampi {
 	 * 
 	 */
 	public void desenha() {
-
+		// center
+		app.rectMode(2);
+		app.rect(pos.x, pos.y, 10, 10);
 
 	}
 
